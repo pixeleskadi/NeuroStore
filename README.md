@@ -1,585 +1,671 @@
 # NeuroStore
 
-> *A biologically-inspired memory storage architecture with reinforcement, forgetting, recovery, and associative recall.*
+> **A biologically-inspired memory storage architecture that simulates reinforcement, forgetting, recovery, and associative recall using weighted memory graphs.**
 
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-55%20passed-brightgreen.svg)](#testing)
-[![Storage: SQLite](https://img.shields.io/badge/storage-SQLite-orange.svg)](https://sqlite.org)
+NeuroStore is an experimental storage and retrieval system inspired by the way biological memory operates. Unlike traditional databases that treat information as static records, NeuroStore models memories as dynamic entities that can strengthen, weaken, become dormant, recover through association, and eventually consolidate into long-term memory.
 
----
-
-## Table of Contents
-
-1. [Research Motivation](#research-motivation)
-2. [Biological Inspiration](#biological-inspiration)
-3. [System Architecture](#system-architecture)
-4. [Memory Lifecycle](#memory-lifecycle)
-5. [Core Concepts](#core-concepts)
-6. [Installation](#installation)
-7. [Usage](#usage)
-8. [Project Structure](#project-structure)
-9. [Experimental Results](#experimental-results)
-10. [API Reference](#api-reference)
-11. [Future Research Directions](#future-research-directions)
-12. [Research Paper Ideas](#research-paper-ideas)
-13. [Contributing](#contributing)
-14. [License](#license)
+The project explores whether principles observed in human memory can be translated into a computational architecture for intelligent information storage and retrieval.
 
 ---
 
-## Research Motivation
+## Authors
 
-Traditional data storage systems treat all data as equally important, equally accessible, and permanently retrievable. They have no concept of **importance decay**, **associative access**, or **consolidation over time**. Real-world intelligent systems — biological or artificial — must manage knowledge that:
+- Aditya Bhardwaj
+- Rishika Kapil
 
-- Becomes less accessible if not used
-- Strengthens through rehearsal and association
-- Clusters into related knowledge schemas
-- Can be partially recovered from contextual cues
-
-NeuroStore is a proof-of-concept demonstrating that these behaviours can be modelled computationally, opening a path toward **adaptive, brain-like storage systems** for AI agents, robotics, and knowledge management applications.
+Independent Research Project (2026)
 
 ---
 
-## Biological Inspiration
+## Project Status
 
-NeuroStore models three well-established neuroscientific principles:
-
-### 1. Ebbinghaus Forgetting Curve (1885)
-Hermann Ebbinghaus discovered that memory retention follows an exponential decay function:
-
-```
-R(t) = e^(-t / S)
-```
-
-Where `R` is retention, `t` is time since encoding, and `S` is the *stability* of the memory (higher for stronger/older memories). NeuroStore implements this as the default decay model with three variants: exponential (default), linear, and power-law.
-
-### 2. Long-Term Potentiation (LTP)
-*Neurons that fire together, wire together.* — Hebbian learning
-
-When memories are repeatedly co-activated, the synaptic connections between them strengthen. NeuroStore models this via:
-- **Explicit reinforcement**: Direct recall increases node weight by `reinforcement_factor`
-- **Associative reinforcement**: Nearby nodes receive partial activation proportional to edge weight
-- **Hebbian edge strengthening**: Co-activated nodes increase their shared edge weight
-
-### 3. Memory Consolidation (Hippocampal-Cortical Transfer)
-Highly reinforced memories transition from hippocampal (fast, volatile) to cortical (slow, stable) storage. In NeuroStore:
-- Nodes below weight 20 → **DORMANT** (forgotten but not deleted)
-- Nodes above weight 90 → **LONG_TERM** (consolidated; minimal decay)
-- DORMANT nodes can be recovered through sufficiently strong associative activation from neighbours
+Research Prototype / Proof of Concept
 
 ---
 
-## System Architecture
+## Research Question
 
+Can biologically-inspired memory mechanisms such as reinforcement, forgetting, and associative recall improve information organization compared to traditional static storage systems?
+
+---
+
+# Table of Contents
+
+* Overview
+* Motivation
+* Core Concepts
+* System Architecture
+* Memory Lifecycle
+* Features
+* Project Structure
+* Installation
+* Usage
+* Example Workflow
+* Memory Retrieval Process
+* Analytics & Visualization
+* Research Applications
+* Current Limitations
+* Future Work
+* Contributing
+* License
+
+---
+
+# Overview
+
+NeuroStore is not intended to be a neuroscience simulator.
+
+Instead, it is a proof-of-concept memory architecture that borrows several high-level ideas from biological cognition:
+
+* Memory reinforcement through recall
+* Memory decay through neglect
+* Associative memory networks
+* Long-term memory consolidation
+* Recovery of forgotten memories
+* Dynamic memory importance
+
+Information is stored as interconnected nodes within a weighted graph structure.
+
+Each memory contains:
+
+* Content
+* Importance score (weight)
+* Relationships with other memories
+* Decay properties
+* Retrieval history
+
+Over time, memories evolve based on usage patterns.
+
+---
+
+# Motivation
+
+Modern storage systems are excellent at preserving information but do not model how information changes in importance over time.
+
+Traditional databases:
+
+* Store data permanently
+* Treat all records equally
+* Require explicit deletion
+* Lack natural associations
+
+Human memory behaves differently.
+
+Memories:
+
+* Strengthen when recalled
+* Fade when ignored
+* Form associations
+* Become easier to access through repetition
+* Can sometimes be recovered after being forgotten
+
+NeuroStore explores whether these characteristics can be represented computationally using graph structures and adaptive weighting mechanisms.
+
+---
+
+# Core Concepts
+
+## Memory Node
+
+A memory is represented as a graph node.
+
+Example:
+
+```json
+{
+    "id": "M001",
+    "title": "Quantum Mechanics",
+    "content": "Introduction to wave functions",
+    "weight": 65,
+    "status": "ACTIVE"
+}
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         NeuroStore                              │
-├─────────────┬───────────────────────────────────────────────────┤
-│   CLI       │  main.py  (add | recall | simulate | stats |     │
-│             │           visualize | demo)                       │
-├─────────────┴────────────────────────────────────────────────── ┤
-│   Simulation Engine (simulation.py)                             │
-│   Orchestrates: decay → recall → recovery → LTM sync           │
-├──────────────────┬──────────────────────────────────────────────┤
-│   Memory Layer   │   Graph Layer                                │
-│                  │                                              │
-│  MemoryNode      │  MemoryGraph (NetworkX DiGraph)              │
-│  - weight        │  - weighted directed edges                   │
-│  - decay_rate    │  - BFS associative recall                    │
-│  - status        │  - shortcut formation                        │
-│  - recall_count  │  - path finding                              │
-├──────────────────┴──────────────────────────────────────────────┤
-│   Engines                                                       │
-│   DecayEngine    ReinforcementEngine   RecoveryEngine           │
-│   LongTermHighway (fast O(1) LTM index)                        │
-├─────────────────────────────────────────────────────────────────┤
-│   Analytics          │   Visualization                          │
-│   MetricsTracker     │   NetworkX + Matplotlib                  │
-│   Charts (6 types)   │   graph_view.py                          │
-├──────────────────────┴──────────────────────────────────────────┤
-│   Persistence: SQLite (WAL mode, ACID transactions)             │
-│   Tables: memory_nodes | memory_edges | simulation_metrics |    │
-│           ltm_highway                                           │
-└─────────────────────────────────────────────────────────────────┘
+
+Each memory contains:
+
+| Property      | Description          |
+| ------------- | -------------------- |
+| ID            | Unique identifier    |
+| Title         | Memory label         |
+| Content       | Stored information   |
+| Weight        | Importance level     |
+| Status        | Current memory state |
+| Created At    | Creation timestamp   |
+| Last Accessed | Most recent recall   |
+
+---
+
+## Weighted Associations
+
+Memories are connected through weighted edges.
+
+Example:
+
+```text
+Quantum Mechanics
+      |
+      | 0.82
+      v
+Wave Function
+```
+
+Higher weights indicate stronger associations.
+
+---
+
+## Reinforcement
+
+When a memory is recalled:
+
+```text
+Weight += Reinforcement Factor
+```
+
+Repeated access strengthens memory retention.
+
+---
+
+## Decay
+
+Memories naturally lose significance over time.
+
+```text
+Weight -= Decay Function
+```
+
+The rate of decay depends on:
+
+* Current weight
+* Memory status
+* Time since last recall
+
+---
+
+## Long-Term Consolidation
+
+Highly reinforced memories enter a dedicated long-term memory structure.
+
+Characteristics:
+
+* Minimal decay
+* Faster retrieval
+* Stronger associations
+
+---
+
+## Associative Recall
+
+Recalling one memory partially activates related memories.
+
+Example:
+
+```text
+TFET
+ |
+ +--> Semiconductor Physics
+ |
+ +--> Quantum Tunneling
+ |
+ +--> Electronics
+```
+
+This mimics associative memory retrieval.
+
+---
+
+# System Architecture
+
+```text
+                 User Input
+                      |
+                      v
+              Memory Manager
+                      |
+                      v
+              Graph Structure
+                      |
+     --------------------------------
+     |              |              |
+     v              v              v
+
+ Reinforcement   Decay Engine   Recovery
+     |                              |
+     --------------------------------
+                      |
+                      v
+             Long-Term Highway
+                      |
+                      v
+                SQLite Storage
+```
+
+The architecture separates memory behavior from storage persistence.
+
+SQLite handles storage.
+
+Graph structures handle cognition-inspired behavior.
+
+---
+
+# Memory Lifecycle
+
+## Stage 1 — Creation
+
+A memory is added to the system.
+
+```text
+Status: ACTIVE
+Weight: 40
 ```
 
 ---
 
-## Memory Lifecycle
+## Stage 2 — Reinforcement
 
-Each memory node progresses through the following states:
+Repeated recall increases weight.
 
+```text
+40 → 55 → 72 → 89
 ```
-                    ┌─────────────────────────────────┐
-                    │          NEW MEMORY              │
-                    │  weight = 50  status = ACTIVE    │
-                    └────────────────┬────────────────┘
-                                     │
-                    ┌────────────────▼────────────────┐
-                    │    ACTIVE  (weight 20–89)        │◄──── Recall / Rehearsal
-                    │  Decays daily via forgetting     │      (weight += factor)
-                    │  curve. Associative recall       │
-                    │  strengthens connections.        │
-                    └──────┬─────────────┬────────────┘
-                           │             │
-              weight < 20  │             │  weight ≥ 90
-                           ▼             ▼
-                    ┌──────────┐  ┌─────────────────────┐
-                    │ DORMANT  │  │   LONG_TERM (LTM)    │
-                    │ (weight  │  │  Decay ×0.05 (95%    │
-                    │ < 20)    │  │  slower). Enters     │
-                    │ Not      │  │  LTM Highway for     │
-                    │ deleted. │  │  fast retrieval.     │
-                    └────┬─────┘  └─────────────────────┘
-                         │
-          Sufficient     │
-          activation     │
-          from neighbours│
-                    ┌────▼─────┐
-                    │ RECOVERED │
-                    │ → ACTIVE  │
-                    └──────────┘
-```
-
-### Thresholds
-
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| `DORMANCY_THRESHOLD` | 20.0 | Weight below this → DORMANT |
-| `LONG_TERM_THRESHOLD` | 90.0 | Weight above this → LONG_TERM |
-| `LTM_DECAY_MULTIPLIER` | 0.05 | LTM decays at 5% of normal rate |
-| `DEFAULT_INITIAL_WEIGHT` | 50.0 | New memory starting weight |
-| `REINFORCEMENT_FACTOR` | 10.0 | Weight gained per explicit recall |
-| `ASSOCIATIVE_REINFORCE` | 3.0 | Weight gained via graph traversal |
-| `MAX_WEIGHT` | 100.0 | Weight ceiling |
 
 ---
 
-## Core Concepts
+## Stage 3 — Consolidation
 
-### Graph-Based Retrieval
+Once the threshold is reached:
 
-Unlike traditional key-value stores, NeuroStore retrieval uses **weighted BFS** across the association graph. Recalling node A propagates activation to all reachable neighbours within `depth` hops, attenuated by edge weight and traversal depth:
-
-```
-activation(neighbor) = activation(source) × edge_weight × depth_decay^hop
+```text
+Weight ≥ 90
 ```
 
-This mirrors hippocampal pattern completion: a partial cue activates the full memory, and related memories receive fractional activation.
+The memory becomes:
 
-### Memory Shortcuts
-
-When node B on a path A → B → C becomes DORMANT, NeuroStore automatically forms a shortcut:
-
+```text
+LONG_TERM
 ```
-A → C   (weight = A→B × B→C × 0.6)
-```
-
-This represents the brain's tendency to form condensed semantic schemas — the details of intermediate steps fade, but the high-level relationship persists.
-
-### Spaced Repetition
-
-The `ReinforcementEngine` implements an SM-2-inspired review schedule. Optimal inter-repetition intervals grow with recall count:
-
-```
-interval(n) = interval(n-1) × ease_factor
-```
-
-Diminishing-returns reinforcement ensures the marginal gain per recall decreases as `recall_count` grows, preventing runaway weight inflation.
-
-### Long-Term Memory Highway
-
-The `LongTermHighway` is a separate fast-access index (`OrderedDict`) for LONG_TERM nodes. It provides:
-- O(1) lookup by node ID
-- Automatic interconnection between recently consolidated memories (simulating cortical schema formation)
-- Decay resistance: LTM weight never drops below 90
-- Access-count tracking for retrieval frequency analytics
 
 ---
 
-## Installation
+## Stage 4 — Neglect
 
-### Prerequisites
-- Python 3.10+
-- No cloud dependencies, no API keys
+If not recalled:
+
+```text
+Weight ↓
+```
+
+---
+
+## Stage 5 — Dormancy
+
+Below threshold:
+
+```text
+Weight < 20
+```
+
+Status changes to:
+
+```text
+DORMANT
+```
+
+The memory is hidden but not deleted.
+
+---
+
+## Stage 6 — Recovery
+
+Associated memories can reactivate dormant memories.
+
+```text
+DORMANT → ACTIVE
+```
+
+Connections are restored and retention increases.
+
+---
+
+# Features
+
+## Graph-Based Storage
+
+Information stored as interconnected nodes.
+
+## Memory Reinforcement
+
+Recall strengthens retention.
+
+## Adaptive Forgetting
+
+Unused memories gradually weaken.
+
+## Dormancy
+
+Memories become inactive instead of being deleted.
+
+## Memory Recovery
+
+Forgotten memories can be reactivated.
+
+## Long-Term Memory Highway
+
+Strong memories are consolidated.
+
+## Analytics Dashboard
+
+Tracks memory evolution.
+
+## Visualization Tools
+
+Generate network diagrams and statistics.
+
+---
+
+# Project Structure
+
+```text
+neurostore/
+
+├── main.py
+├── memory/
+│   ├── node.py
+│   ├── graph.py
+│   ├── decay.py
+│   ├── reinforcement.py
+│   ├── recovery.py
+│   └── highway.py
+│
+├── database/
+│   └── db.py
+│
+├── analytics/
+│   ├── metrics.py
+│   └── charts.py
+│
+├── visualization/
+│   └── graph_view.py
+│
+├── tests/
+├── data/
+├── README.md
+└── requirements.txt
+```
+
+---
+
+## Screenshots
+
+### Memory Graph
+
+![Memory Graph](images/graph.png)
+
+### Analytics Dashboard
+
+![Analytics](images/analytics.png)
+
+---
+
+# Installation
+
+Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/neurostore.git
+git clone https://github.com/pixeleskadi/neurostore.git
+
 cd neurostore
+```
+
+Create virtual environment:
+
+```bash
+python -m venv venv
+```
+
+Activate environment:
+
+Windows:
+
+```bash
+venv\Scripts\activate
+```
+
+Linux/macOS:
+
+```bash
+source venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
 pip install -r requirements.txt
 ```
 
-### Requirements
-```
-networkx>=3.2.1
-matplotlib>=3.8.0
-numpy>=1.26.0
-pytest>=8.0.0
-```
-
 ---
 
-## Usage
+# Usage
 
-### Quick Start — Demo
-
-Seeds a 15-node quantum physics / semiconductor knowledge graph and runs a 30-day simulation:
-
-```bash
-python main.py demo
-```
-
-Output:
-- `outputs/initial_graph.png`  — Graph before simulation
-- `outputs/memory_graph.png`   — Graph after simulation
-- `outputs/ltm_highway.png`    — Long-term memory cluster
-- `outputs/simulation_dashboard.png` — 6-panel analytics dashboard
-- `outputs/memory_lifecycle.png`
-- `outputs/weight_trajectory.png`
-- `outputs/recovery_vs_forgetting.png`
-- `outputs/ltm_growth.png`
-- `outputs/edge_evolution.png`
-
----
-
-### Add a Memory
+Add a memory:
 
 ```bash
 python main.py add
 ```
 
-Interactive prompts:
-```
-Title   : Transformer Architecture
-Content : Self-attention mechanism, multi-head attention, positional encoding.
-Tags    : ml, nlp, attention
-Initial weight (default 50): 60
-Decay rate (default 0.05): 0.04
-```
-
-Optionally associate with existing nodes by providing their 8-character ID prefixes.
-
----
-
-### Recall a Memory
+Recall a memory:
 
 ```bash
 python main.py recall
 ```
 
-```
-Search query: quantum
-
-Found 3 match(es):
-  [1] ● [a1b2c3d4] Quantum Mechanics         weight=  85.3  recalls=7
-  [2] ● [e5f6g7h8] Quantum Tunneling          weight=  72.1  recalls=3
-  [3] ○ [i9j0k1l2] Quantum Entanglement       weight=  14.2  recalls=0
-
-Choose [1-N]: 1
-
-Recalling: Quantum Mechanics
-Content  : Foundational study notes on quantum principles ...
-Status   : ACTIVE
-Weight   : 85.3
-
-✓ Recalled. New weight: 92.8
-  Associative activation spread to 4 neighbors:
-    → Wave Function              activation=0.720
-    → Schrödinger Equation       activation=0.704
-    → Quantum Tunneling          activation=0.640
-    → Semiconductor Physics      activation=0.448
-```
-
----
-
-### Run a Simulation
+Run simulation:
 
 ```bash
-# 30-day simulation (default)
 python main.py simulate
-
-# 90-day simulation with linear decay
-python main.py simulate --days 90 --model linear
-
-# 365-day long-term study
-python main.py simulate --days 365 --model exponential
 ```
 
-Available durations: `7`, `14`, `30`, `90`, `180`, `365`
-Available decay models: `exponential` (default), `linear`, `power`
-
----
-
-### View Statistics
+Generate analytics:
 
 ```bash
 python main.py stats
 ```
 
-```
-── NeuroStore Statistics ──────────────────────────────
-  Nodes  : 15
-  Edges  : 38
-  Active : 5
-  Dormant: 0
-  LTM    : 10
-  Avg W  : 85.3
-  Max W  : 100.0
-  Min W  : 42.1
-
-  All Memory Nodes:
-  ★ [a1b2c3d4] Quantum Mechanics             weight= 100.0  recalls=12
-  ★ [e5f6g7h8] Python Programming            weight= 100.0  recalls=15
-  ...
-```
-
----
-
-### Visualize the Graph
+Visualize memory graph:
 
 ```bash
-# Spring layout (default)
 python main.py visualize
-
-# Alternative layouts
-python main.py visualize --layout kamada_kawai
-python main.py visualize --layout circular
-python main.py visualize --layout spectral
-```
-
-**Color scheme:**
-- 🟢 **Green** — ACTIVE memories
-- 🔴 **Red** — DORMANT memories
-- 🔵 **Blue** — LONG_TERM memories
-- Node size proportional to weight
-- Edge opacity and thickness proportional to association strength
-
----
-
-### Programmatic API
-
-```python
-from memory.graph import MemoryGraph
-from memory.node import MemoryNode
-from memory.decay import DecayEngine
-from simulation import SimulationEngine, SimulationConfig
-from database.db import NeuroStoreDB
-
-# Build a graph
-graph = MemoryGraph()
-qm = MemoryNode("Quantum Mechanics", "Wave-particle duality...", weight=60.0)
-wf = MemoryNode("Wave Function", "ψ encodes probability amplitude...", weight=55.0)
-graph.add_node(qm)
-graph.add_node(wf)
-graph.add_edge(qm.id, wf.id, weight=0.85, bidirectional=True)
-
-# Recall a memory (triggers associative activation)
-activation_map = graph.recall(qm.id, depth=2)
-
-# Run a simulation
-db = NeuroStoreDB("data/neurostore.db")
-config = SimulationConfig(total_days=90, decay_model="exponential")
-engine = SimulationEngine(graph=graph, db=db, config=config)
-result = engine.run(generate_charts=True)
-
-result.print_report()
 ```
 
 ---
 
-## Project Structure
+# Example Workflow
 
-```
-neurostore/
-├── main.py                    # CLI entry point
-├── simulation.py              # Simulation engine (orchestrator)
-├── requirements.txt
-├── README.md
-│
-├── memory/
-│   ├── __init__.py
-│   ├── node.py                # MemoryNode dataclass + state machine
-│   ├── graph.py               # MemoryGraph (NetworkX DiGraph wrapper)
-│   ├── decay.py               # DecayEngine (exponential/linear/power)
-│   ├── reinforcement.py       # ReinforcementEngine + spaced repetition
-│   ├── recovery.py            # RecoveryEngine + PathRestorer
-│   └── highway.py             # LongTermHighway (fast LTM index)
-│
-├── database/
-│   ├── __init__.py
-│   └── db.py                  # NeuroStoreDB (SQLite, WAL mode)
-│
-├── analytics/
-│   ├── __init__.py
-│   ├── metrics.py             # MetricsTracker + DaySnapshot
-│   └── charts.py              # 6 matplotlib chart types
-│
-├── visualization/
-│   ├── __init__.py
-│   └── graph_view.py          # render_graph / render_subgraph / render_ltm
-│
-├── tests/
-│   ├── __init__.py
-│   └── test_neurostore.py     # 55 unit + integration tests
-│
-├── data/
-│   └── neurostore.db          # SQLite database (auto-created)
-│
-└── outputs/                   # Generated PNG files
-    ├── initial_graph.png
-    ├── memory_graph.png
-    ├── ltm_highway.png
-    ├── simulation_dashboard.png
-    └── ...
+1. Add memory
+
+```text
+Title:
+Quantum Mechanics
 ```
 
----
+2. Add related memory
 
-## Testing
-
-```bash
-python -m pytest tests/ -v
+```text
+Wave Function
 ```
 
-**55 tests across 8 test classes:**
+3. Create association
 
-| Class | Tests | Coverage |
-|-------|-------|----------|
-| `TestMemoryNode` | 11 | Node lifecycle, serialization, decay, reinforcement |
-| `TestMemoryGraph` | 9 | Graph ops, recall propagation, shortcut formation |
-| `TestDecayEngine` | 7 | All three decay models, LTM protection, dormancy |
-| `TestReinforcementEngine` | 5 | Explicit/associative, diminishing returns, LTM tracking |
-| `TestRecoveryEngine` | 4 | Scan recovery, targeted recovery, isolated nodes |
-| `TestLongTermHighway` | 5 | Consolidation, idempotency, access tracking |
-| `TestNeuroStoreDB` | 8 | Full CRUD, graph persistence, metrics |
-| `TestMetricsTracker` | 5 | Snapshot, series, summary, JSON/CSV export |
-| `TestIntegration` | 1 | Full 10-day simulation cycle |
+```text
+Quantum Mechanics → Wave Function
+```
 
----
+4. Recall Quantum Mechanics repeatedly
 
-## Experimental Results
+5. Observe increasing weight
 
-Running `python main.py demo` produces the following observations on the 15-node quantum physics graph over 30 simulated days:
+6. Watch memory enter long-term storage
 
-| Metric | Value |
-|--------|-------|
-| Total nodes | 15 |
-| Final ACTIVE | 5 |
-| Final DORMANT | 0 |
-| Final LONG_TERM | 10 |
-| LTM promotions | 10 |
-| LTM interconnections | 24 |
-| Retrieval efficiency | 100% |
-| Final avg weight | 85.3 |
+7. Simulate neglect
 
-**Key observations:**
-1. **LTM consolidation is rapid for well-connected nodes** — "Long-Term Potentiation (LTP)" achieved LONG_TERM status by Day 1 due to high initial weight (92) and frequent associative activation from its neighbours.
-2. **Frequently accessed nodes resist forgetting** — In a 30-day run with 25% recall probability, no nodes became DORMANT. In a 365-day run with lower recall probability, dormancy and recovery events become prominent.
-3. **Graph topology influences consolidation speed** — Hub nodes (high in-degree) receive more associative activation and consolidate faster than leaf nodes.
-4. **LTM highway forms dense clusters** — With 10 LONG_TERM nodes and 24 bidirectional interconnections, the highway exhibits small-world network properties.
+8. Observe dormancy
+
+9. Trigger recovery via related memories
 
 ---
 
-## Future Research Directions
+# Memory Retrieval Process
 
-### 1. Small Local LLM Categorization
-Integrate a quantized local LLM (e.g., Ollama + Mistral-7B) to:
-- Auto-generate semantic tags for new memories
-- Suggest association targets when adding a node
-- Generate natural-language recall summaries
+Traditional databases:
 
-### 2. Vector Embeddings for Semantic Similarity
-Replace or augment title/tag search with dense vector embeddings:
-- Use `sentence-transformers` to embed memory content
-- Compute cosine similarity to automatically suggest edge weights
-- Enable semantic nearest-neighbour recall (FAISS / ChromaDB)
-- Compare NeuroStore graph traversal vs. pure vector search recall quality
+```text
+Query → Record
+```
 
-### 3. Raspberry Pi Deployment
-Port NeuroStore to embedded hardware:
-- Target: Raspberry Pi 4 (4GB) or Pi 5
-- SQLite WAL mode is well-suited for SD card I/O patterns
-- Evaluate decay simulation overhead on ARM Cortex-A72
-- Explore use cases: personal knowledge assistant, robotics episodic memory
+NeuroStore:
 
-### 4. SSD-Aware Storage Optimization
-Optimize for NAND flash storage characteristics:
-- Batch writes to reduce write amplification
-- Implement tiered storage: ACTIVE nodes in RAM, DORMANT nodes on SSD
-- WAL checkpoint tuning for flash-friendly write patterns
-- Evaluate LevelDB / RocksDB as SQLite alternatives for high-throughput workloads
+```text
+Query
+  ↓
+Memory Node
+  ↓
+Associated Nodes
+  ↓
+Activation Propagation
+  ↓
+Contextual Retrieval
+```
 
-### 5. Neuromorphic Computing Adaptation
-Map NeuroStore onto neuromorphic hardware:
-- Intel Loihi 2 / IBM NorthPole spike-based processing
-- Represent weight values as spike rates
-- Decay as membrane potential leakage
-- Associative recall as lateral inhibition / winner-take-all circuits
-
-### 6. Comparison with Vector Databases
-Rigorous benchmarking study:
-- **Recall quality**: NeuroStore graph traversal vs. Pinecone / Weaviate / Chroma
-- **Write throughput**: bulk memory ingestion
-- **Read latency**: single-node recall vs. ANN search
-- **Associative breadth**: how many related memories does each approach surface?
-- Hypothesis: graph traversal surfaces contextually relevant memories that pure vector search misses due to semantic gap between embedding space and conceptual association
-
-### 7. Comparison with Traditional SQL Retrieval
-- Full-text search (SQLite FTS5) vs. NeuroStore graph recall
-- Query latency vs. associative depth
-- Effect of graph density on retrieval quality
-- Hybrid approach: SQL for exact match, graph for associative expansion
-
-### 8. Emotional Salience Weighting
-Add an `emotional_valence` field to MemoryNode:
-- Positive/negative valence increases initial weight (analogous to amygdala modulation)
-- High-valence memories have lower decay rates
-- Model flashbulb memories (traumatic/highly emotional events → near-zero decay)
-
-### 9. Forgetting as Feature, Not Bug
-Research direction: intentional forgetting for privacy and cognitive hygiene:
-- Implement `force_forget(node_id)` that drives weight to zero
-- Study effects on associative graph connectivity post-forced-forgetting
-- Application: GDPR-compliant AI memory systems
-
-### 10. Multi-Agent Shared Memory
-Extend NeuroStore to a distributed, multi-agent architecture:
-- Shared `LongTermHighway` across agents (common knowledge base)
-- Private ACTIVE/DORMANT layers per agent
-- Study knowledge propagation dynamics in agent networks
+This allows information to be retrieved through relationships rather than exact matches alone.
 
 ---
 
-## Research Paper Ideas
+# Analytics & Visualization
 
-1. **"NeuroStore: A Graph-Based Memory Architecture Inspired by Hippocampal-Cortical Consolidation"** — Systems paper describing the architecture, comparing with vector databases and SQL retrieval on knowledge retention benchmarks.
+NeuroStore tracks:
 
-2. **"Simulating the Ebbinghaus Curve in Artificial Memory Systems: Exponential vs. Power-Law Forgetting in Graph-Structured Knowledge Bases"** — Empirical comparison of decay models on retrieval quality over simulated time horizons.
+* Active memories
+* Dormant memories
+* Long-term memories
+* Average memory weight
+* Recovery events
+* Forgetting events
+* Graph density
+* Retrieval efficiency
 
-3. **"Associative Memory Recovery in Artificial Systems: Graph Traversal as a Model of Context-Dependent Recall"** — Studies the conditions under which dormant memory recovery succeeds, analogising to Tulving's encoding specificity principle.
+Visualization outputs include:
 
-4. **"Memory Shortcuts as Emergent Schemas: Modelling Gist Extraction Through Dormancy-Induced Graph Compression"** — Formal analysis of the shortcut formation mechanism and its relationship to semantic compression in human long-term memory.
-
-5. **"Retrieval Efficiency Trade-offs in Biologically-Inspired vs. Vector-Based Memory Systems for AI Agents"** — Benchmark study across recall quality, latency, and associative breadth metrics.
-
----
-
-## Contributing
-
-Contributions are welcome. Please:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Run tests (`python -m pytest tests/ -v`)
-4. Submit a pull request with a clear description
+* Network graphs
+* Memory status maps
+* Retention trends
+* Consolidation statistics
 
 ---
 
-## License
+# Research Applications
 
-MIT License — see [LICENSE](LICENSE) for details.
+Potential research directions include:
+
+* Cognitive-inspired storage systems
+* Associative memory retrieval
+* Knowledge graph evolution
+* Low-power information systems
+* Educational memory modeling
+* Intelligent note-taking systems
+* Neuromorphic software architectures
 
 ---
 
-*NeuroStore is a research prototype. It is not production memory management software. It is an exploration of what computation might look like if we took the biology of memory seriously.*
+# Current Limitations
+
+This project is an experimental proof of concept.
+
+Current limitations include:
+
+* Simplified memory model
+* Fixed decay parameters
+* No biological validation
+* No semantic understanding
+* No neural computation
+* No embedding-based similarity
+
+The system is inspired by memory behavior but does not claim to accurately model human cognition.
+
+---
+
+## Disclaimer
+
+NeuroStore is inspired by concepts from cognitive science and neuroscience.
+
+It is not intended to be an accurate simulation of the human brain and should be viewed as an experimental storage architecture inspired by memory-related behaviors.
+
+---
+
+
+# Future Work
+
+## Small Local Language Models
+
+Automatic memory categorization and linking.
+
+## Semantic Embeddings
+
+Similarity-based memory formation.
+
+## Vector Database Integration
+
+Comparison with modern retrieval systems.
+
+## Raspberry Pi Deployment
+
+Low-power memory architecture experiments.
+
+## SSD-Aware Optimization
+
+Investigating biologically-inspired storage behavior on flash memory systems.
+
+## Adaptive Decay Models
+
+Decay functions derived from empirical memory research.
+
+## Research Publication
+
+Benchmarking NeuroStore against traditional retrieval systems and vector databases.
+
+---
+
+# Contributing
+
+Contributions, experiments, and research collaborations are welcome.
+
+Areas of interest include:
+
+* Graph optimization
+* Retrieval algorithms
+* Cognitive architectures
+* Embedded systems
+* Data analytics
+* Memory modeling
+
+Please open an issue or submit a pull request.
+
+---
+
+# License
+
+MIT License
+
+---
+
+## Citation
+
+If you use NeuroStore in research or academic work, please cite:
+
+```text
+NeuroStore: A Biologically-Inspired Memory Storage Architecture
+Author(s): Aditya Bhardwaj, Rishika Kapil
+Year: 2026
+```
+
+---
+
+*"Exploring memory as a dynamic network rather than a static database."*
