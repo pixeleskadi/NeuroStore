@@ -1,0 +1,4 @@
+networkx>=3.2.1
+matplotlib>=3.8.0
+numpy>=1.26.0
+pytest>=8.0.0
