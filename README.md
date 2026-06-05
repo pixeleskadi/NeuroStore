@@ -394,16 +394,39 @@ neurostore/
 
 ---
 
-## Screenshots
+# Screenshots
 
-### Memory Graph
+## Memory Graph
 
-![Memory Graph](images/graph.png)
+![Memory Graph](outputs/memory_graph.png)
 
-### Analytics Dashboard
+## Memory Lifecycle
 
-![Analytics](images/analytics.png)
+![Memory Lifecycle](outputs/memory_lifecycle.png)
 
+## Long-Term Memory Growth
+
+![Long-Term Memory Growth](outputs/ltm_growth.png)
+
+## Long-Term Memory Highway
+
+![Long-Term Memory Highway](outputs/ltm_highway.png)
+
+## Recovery vs Forgetting
+
+![Recovery vs Forgetting](outputs/recovery_vs_forgetting.png)
+
+## Weight Trajectory
+
+![Weight Trajectory](outputs/weight_trajectory.png)
+
+## Edge Evolution
+
+![Edge Evolution](outputs/edge_evolution.png)
+
+## Simulation Dashboard
+
+![Simulation Dashboard](outputs/simulation_dashboard.png)
 ---
 
 # Installation
